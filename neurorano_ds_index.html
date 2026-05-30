@@ -1,0 +1,1434 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<title>NeuroRANO · Classificador RANO 2.0</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* =================================================================
+   NeuroRANO · Dark clinical design system
+   Palette: deep slate + clinical cyan + semantic green / red / amber
+   ================================================================= */
+:root{
+  --bg:#0a0f1c;
+  --bg-2:#0e1525;
+  --panel:#121a2e;
+  --panel-2:#172041;
+  --panel-hi:#1c2649;
+  --line:#243056;
+  --line-2:#2e3a66;
+  --text:#eaf0ff;
+  --text-2:#b8c1da;
+  --muted:#7a85a3;
+  --accent:#48d6ff;       /* clinical cyan */
+  --accent-2:#1fb4e6;
+  --accent-soft:rgba(72,214,255,.12);
+  --teal:#34d6c2;
+  --ok:#22c08b;
+  --ok-soft:rgba(34,192,139,.14);
+  --warn:#f5b14a;
+  --warn-soft:rgba(245,177,74,.13);
+  --bad:#f5556c;
+  --bad-soft:rgba(245,85,108,.14);
+  --equiv:#b48bff;
+  --equiv-soft:rgba(180,139,255,.14);
+  --minor:#79e4cd;
+  --minor-soft:rgba(121,228,205,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 18px 40px rgba(0,0,0,.35);
+  --radius:16px;
+  --radius-sm:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(1200px 800px at 80% -10%, #15203b 0%, var(--bg) 55%) fixed;
+  color:var(--text);font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:14px;line-height:1.55;font-feature-settings:"ss01","cv11","tnum";
+  -webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ----------------- Top bar ----------------- */
+header{position:sticky;top:0;z-index:20;
+  background:linear-gradient(180deg,rgba(10,15,28,.92),rgba(10,15,28,.7));
+  backdrop-filter:blur(14px) saturate(140%);
+  border-bottom:1px solid var(--line);
+  padding:14px 28px;display:flex;align-items:center;gap:16px}
+.logo{width:36px;height:36px;border-radius:11px;
+  background:linear-gradient(135deg,var(--accent),var(--teal));
+  display:grid;place-items:center;color:#062234;font-weight:800;font-size:14px;
+  box-shadow:0 6px 24px rgba(72,214,255,.25)}
+.brand{display:flex;flex-direction:column}
+.brand .t{font-size:15px;font-weight:600;letter-spacing:-.2px}
+.brand .s{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+
+/* ----------------- Stepper (top) ----------------- */
+.stepper{padding:18px 28px 0;display:flex;gap:8px;flex-wrap:wrap}
+.step{flex:1;min-width:160px;display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer;
+  transition:.15s;user-select:none}
+.step:hover{border-color:var(--line-2)}
+.step.active{background:linear-gradient(180deg,var(--panel-hi),var(--panel));
+  border-color:var(--accent);box-shadow:0 0 0 1px var(--accent), 0 8px 24px rgba(72,214,255,.08)}
+.step.done .num{background:var(--ok);color:#04231a}
+.step .num{width:24px;height:24px;border-radius:50%;background:var(--panel-hi);
+  display:grid;place-items:center;font-size:11.5px;font-weight:700;color:var(--text-2);
+  border:1px solid var(--line-2)}
+.step.active .num{background:var(--accent);color:#062234}
+.step .lbl{font-size:13px;font-weight:600;line-height:1.1}
+.step .sub{font-size:11px;color:var(--muted)}
+
+/* ----------------- Layout ----------------- */
+.layout{display:grid;grid-template-columns:1fr 420px;gap:22px;padding:22px 28px 60px;
+  max-width:1480px;margin:0 auto;align-items:flex-start}
+@media (max-width:1100px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:static !important}
+}
+
+/* ----------------- Cards ----------------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden}
+.card .hd{padding:16px 20px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.card .hd h2{margin:0;font-size:15px;font-weight:600;letter-spacing:-.1px;
+  display:flex;align-items:center;gap:8px}
+.card .hd .sub{font-size:12px;color:var(--muted)}
+.card .bd{padding:20px}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--accent);display:inline-flex;align-items:center;gap:8px}
+
+/* ----------------- Forms ----------------- */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;color:var(--text-2);font-weight:600;display:flex;align-items:center;gap:6px}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--bg-2);border:1px solid var(--line);color:var(--text);
+  padding:10px 12px;border-radius:10px;font-size:13.5px;font-family:inherit;
+  transition:.15s}
+.field input:hover,.field select:hover{border-color:var(--line-2)}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input[readonly]{background:var(--panel-2);color:var(--text-2);cursor:not-allowed}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media (max-width:700px){.grid-3,.grid-4{grid-template-columns:1fr 1fr}}
+
+/* Segmented control */
+.seg{display:inline-flex;background:var(--bg-2);border:1px solid var(--line);
+  border-radius:11px;padding:4px;gap:4px}
+.seg button{appearance:none;border:0;background:transparent;color:var(--text-2);
+  padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:.15s}
+.seg button.active{background:var(--accent);color:#062234;box-shadow:0 4px 14px rgba(72,214,255,.25)}
+.seg button:not(.active):hover{color:var(--text);background:var(--panel-hi)}
+
+/* Buttons */
+.btn{appearance:none;border:0;border-radius:11px;padding:11px 18px;font-size:13.5px;
+  font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;
+  gap:8px;transition:.15s;
+  background:linear-gradient(180deg,var(--accent),var(--accent-2));color:#052131;
+  box-shadow:0 6px 18px rgba(72,214,255,.18)}
+.btn:hover{filter:brightness(1.08)}
+.btn.secondary{background:var(--panel-hi);color:var(--text);box-shadow:none;border:1px solid var(--line-2)}
+.btn.secondary:hover{background:var(--panel-2);border-color:var(--accent)}
+.btn.ghost{background:transparent;color:var(--text-2);border:1px solid transparent;box-shadow:none}
+.btn.ghost:hover{background:var(--panel-hi);color:var(--text)}
+.btn.sm{padding:7px 12px;font-size:12px;border-radius:9px}
+
+/* Pills / chips */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
+  font-size:11.5px;font-weight:700;letter-spacing:.2px;border:1px solid transparent}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{color:var(--ok);background:var(--ok-soft)}
+.pill.bad{color:var(--bad);background:var(--bad-soft)}
+.pill.warn{color:var(--warn);background:var(--warn-soft)}
+.pill.equiv{color:var(--equiv);background:var(--equiv-soft)}
+.pill.minor{color:var(--minor);background:var(--minor-soft)}
+.pill.neutral{color:var(--text-2);background:var(--panel-hi);border-color:var(--line)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;
+  background:var(--bg-2);border:1px solid var(--line);font-size:11.5px;color:var(--text-2);
+  font-family:"JetBrains Mono",monospace}
+.chip b{color:var(--text);margin-left:2px}
+
+/* Tooltip */
+.help{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;background:var(--panel-hi);border:1px solid var(--line-2);
+  color:var(--muted);font-size:10.5px;font-weight:700;cursor:help;user-select:none}
+.help:hover{color:var(--accent);border-color:var(--accent)}
+.help .tip{position:fixed;background:#0a1426;color:var(--text);border:1px solid var(--line-2);
+  border-radius:10px;padding:10px 12px;width:300px;max-width:90vw;font-size:12px;font-weight:400;
+  line-height:1.5;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .15s;
+  z-index:1000;text-align:left}
+.help:hover .tip,.help:focus .tip{opacity:1}
+.help .tip b{color:var(--accent)}
+
+/* Tables */
+.lesion-table{width:100%;border-collapse:separate;border-spacing:0;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.lesion-table th,.lesion-table td{padding:10px 12px;border-bottom:1px solid var(--line);
+  font-size:12.5px;text-align:left;vertical-align:middle}
+.lesion-table tr:last-child td{border-bottom:0}
+.lesion-table th{background:var(--panel-2);color:var(--muted);font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.7px;font-weight:700}
+.lesion-table td input{width:100%;background:transparent;border:0;color:var(--text);
+  padding:6px 0;font-size:13px;font-family:inherit}
+.lesion-table td input:focus{outline:none}
+.lesion-table td.read{color:var(--accent);font-weight:600;font-family:"JetBrains Mono",monospace}
+.lesion-table .ix{width:36px;color:var(--muted);font-family:"JetBrains Mono",monospace;font-weight:600}
+.sum-row{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;margin-top:10px;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:12px}
+.sum-row .k{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:700}
+.sum-row .v{font-size:20px;font-weight:700;color:var(--accent);font-family:"JetBrains Mono",monospace}
+
+/* Comparison block */
+.compare{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;
+  margin-top:18px;padding:18px;border-radius:14px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line)}
+.compare .col{text-align:center}
+.compare .col .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+.compare .col .val{font-size:26px;font-weight:700;margin-top:4px;font-family:"JetBrains Mono",monospace}
+.compare .arrow{font-size:22px;color:var(--muted)}
+.delta-card{margin-top:16px;padding:18px 20px;border-radius:14px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  border:1px solid var(--line)}
+.delta-card.up{background:linear-gradient(135deg,rgba(245,85,108,.18),rgba(245,85,108,.05));
+  border-color:rgba(245,85,108,.4)}
+.delta-card.down{background:linear-gradient(135deg,rgba(34,192,139,.18),rgba(34,192,139,.05));
+  border-color:rgba(34,192,139,.4)}
+.delta-card.flat{background:linear-gradient(135deg,rgba(184,193,218,.08),rgba(184,193,218,.02));
+  border-color:var(--line-2)}
+.delta-card .pct{font-size:36px;font-weight:800;letter-spacing:-1px;font-family:"JetBrains Mono",monospace}
+.delta-card.up .pct{color:var(--bad)}
+.delta-card.down .pct{color:var(--ok)}
+.delta-card.flat .pct{color:var(--text-2)}
+.delta-card .txt{font-size:13.5px;color:var(--text-2);flex:1}
+.delta-card .txt b{color:var(--text)}
+
+/* ----------------- Sticky result panel ----------------- */
+.sidebar{position:sticky;top:88px;display:flex;flex-direction:column;gap:14px}
+.result{padding:24px;border-radius:18px;border:1px solid var(--line-2);
+  background:radial-gradient(600px 200px at 50% -20%, rgba(72,214,255,.10), transparent 60%),
+             linear-gradient(180deg,var(--panel-hi),var(--panel));
+  box-shadow:var(--shadow);position:relative;overflow:hidden}
+.result:before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 70%,rgba(0,0,0,.2))}
+.result .eyebrow{margin-bottom:10px}
+.result .cat{font-size:38px;font-weight:800;letter-spacing:-1px;line-height:1.05}
+.result .cat.CR,.result .cat.PR{color:var(--ok)}
+.result .cat.MR{color:var(--minor)}
+.result .cat.SD{color:var(--accent)}
+.result .cat.PD{color:var(--bad)}
+.result .cat.EQ{color:var(--equiv)}
+.result .cat.NE{color:var(--text-2)}
+.result .summary{margin-top:10px;font-size:13.5px;color:var(--text-2);line-height:1.55}
+.result .conf{margin-top:18px}
+.result .conf-lbl{display:flex;justify-content:space-between;font-size:11px;
+  text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700}
+.result .conf-bar{height:8px;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden;
+  margin-top:6px}
+.result .conf-bar i{display:block;height:100%;border-radius:8px;
+  background:linear-gradient(90deg,var(--accent),var(--teal));transition:.4s}
+.result .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+
+.crit-card{padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel)}
+.crit-card h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.9px;
+  color:var(--muted);font-weight:700}
+.crit-list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.crit-list li{display:flex;gap:10px;font-size:12.5px;align-items:flex-start;line-height:1.5}
+.crit-list .ic{flex:0 0 18px;height:18px;border-radius:50%;display:grid;place-items:center;
+  font-size:10.5px;font-weight:800;margin-top:1px}
+.crit-list .ic.y{background:var(--ok-soft);color:var(--ok)}
+.crit-list .ic.n{background:var(--bad-soft);color:var(--bad)}
+.crit-list .ic.w{background:var(--warn-soft);color:var(--warn)}
+.crit-list .ic.i{background:var(--accent-soft);color:var(--accent)}
+
+/* Goal toggle (hero) */
+.goal{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.goal .opt{padding:18px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);
+  cursor:pointer;transition:.15s;display:flex;align-items:flex-start;gap:12px}
+.goal .opt:hover{border-color:var(--line-2)}
+.goal .opt.active{border-color:var(--accent);background:linear-gradient(180deg,var(--panel-hi),var(--panel-2));
+  box-shadow:0 0 0 1px var(--accent), 0 10px 30px rgba(72,214,255,.1)}
+.goal .opt .ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+  font-size:18px;flex:0 0 36px}
+.goal .opt.resp .ic{background:var(--ok-soft);color:var(--ok)}
+.goal .opt.prog .ic{background:var(--bad-soft);color:var(--bad)}
+.goal .opt h4{margin:0;font-size:14px;font-weight:700}
+.goal .opt p{margin:4px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+
+.section-divider{display:flex;align-items:center;gap:12px;margin:24px 0 14px}
+.section-divider .line{flex:1;height:1px;background:var(--line)}
+.section-divider .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;
+  color:var(--muted);font-weight:700}
+
+/* Hide non-active step content */
+.step-panel{display:none}
+.step-panel.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:22px;
+  padding-top:18px;border-top:1px solid var(--line);gap:10px}
+
+/* Reasoning list */
+.rules{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.rules li{padding:10px 12px;border:1px solid var(--line);border-radius:11px;
+  background:var(--bg-2);display:flex;gap:10px;font-size:12.5px;line-height:1.5}
+.rules .tag{font-size:9.5px;font-weight:800;letter-spacing:.6px;padding:3px 8px;border-radius:7px;
+  background:var(--panel-hi);color:var(--muted);height:fit-content;white-space:nowrap}
+.rules li.PD .tag{background:var(--bad-soft);color:var(--bad)}
+.rules li.EQ .tag{background:var(--equiv-soft);color:var(--equiv)}
+.rules li.PR .tag,.rules li.CR .tag{background:var(--ok-soft);color:var(--ok)}
+.rules li.MR .tag{background:var(--minor-soft);color:var(--minor)}
+.rules li.WARN .tag{background:var(--warn-soft);color:var(--warn)}
+.rules li.INFO .tag{background:var(--accent-soft);color:var(--accent)}
+.rules code{font-family:"JetBrains Mono",monospace;background:var(--panel-hi);
+  padding:1px 6px;border-radius:5px;font-size:11.5px;color:var(--accent)}
+
+.hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.report{font-family:"JetBrains Mono",monospace;font-size:11.5px;white-space:pre-wrap;
+  line-height:1.6;color:var(--text-2);background:var(--bg-2);padding:14px;border-radius:10px;
+  border:1px solid var(--line);max-height:340px;overflow:auto}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">NR</div>
+  <div class="brand">
+    <div class="t">NeuroRANO · Classificador RANO 2.0</div>
+    <div class="s">Gliomas do adulto · Wen et al. JCO 2023</div>
+  </div>
+  <div class="top-right">
+    <span class="chip">v0.3 · motor 2023.1</span>
+    <button class="btn secondary sm" onclick="resetAll()">Limpar</button>
+  </div>
+</header>
+
+<!-- Stepper -->
+<div class="stepper" id="stepper">
+  <div class="step active" data-step="1"><div class="num">1</div><div><div class="lbl">Contexto clínico</div><div class="sub">Tumor, fase, terapêutica</div></div></div>
+  <div class="step" data-step="2"><div class="num">2</div><div><div class="lbl">Medições</div><div class="sub">Lesões-alvo do exame actual</div></div></div>
+  <div class="step" data-step="3"><div class="num">3</div><div><div class="lbl">Comparação</div><div class="sub">Estudo de referência</div></div></div>
+  <div class="step" data-step="4"><div class="num">4</div><div><div class="lbl">Critérios extra</div><div class="sub">Novas lesões, clínica, corticoides</div></div></div>
+  <div class="step" data-step="5"><div class="num">5</div><div><div class="lbl">Resultado</div><div class="sub">Classificação RANO 2.0</div></div></div>
+</div>
+
+<div class="layout">
+
+  <!-- ============ MAIN ============ -->
+  <div>
+
+    <!-- STEP 1 — CONTEXTO -->
+    <section class="step-panel active" data-step="1">
+      <div class="card">
+        <div class="hd">
+          <h2><span class="eyebrow">Etapa 1 / 5</span></h2>
+          <div class="sub">Define o objectivo da avaliação e o contexto clínico</div>
+        </div>
+        <div class="bd">
+
+          <div class="eyebrow" style="margin-bottom:10px">Objectivo da avaliação</div>
+          <div class="goal">
+            <div class="opt resp active" data-goal="response" onclick="setGoal('response')">
+              <div class="ic">↘</div>
+              <div>
+                <h4>Avaliar Resposta</h4>
+                <p>Comparar exame actual com o estudo <b>baseline</b>. Procura-se redução tumoral (CR / PR / MR).</p>
+              </div>
+            </div>
+            <div class="opt prog" data-goal="progression" onclick="setGoal('progression')">
+              <div class="ic">↗</div>
+              <div>
+                <h4>Avaliar Progressão</h4>
+                <p>Comparar exame actual com o estudo <b>nadir</b> (menor SPD). Procura-se crescimento ≥ limiar.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin-bottom:14px">
+            <div class="field"><label>Data do exame actual</label>
+              <input id="dateNow" type="date"/></div>
+            <div class="field"><label>Data do estudo baseline</label>
+              <input id="dateBase" type="date"/></div>
+            <div class="field"><label>Data do estudo nadir</label>
+              <input id="dateNadir" type="date"/></div>
+          </div>
+
+          <div class="grid-3">
+            <div class="field"><label>Diagnóstico
+              <span class="help">?<span class="tip"><b>Diagnóstico WHO 2021.</b> A regra do RANO 2.0 muda conforme o tumor: glioblastoma → só captante (excepto sob anti-angiogénico); IDH-mut e mistos → ambos os componentes.</span></span>
+            </label>
+              <select id="entity">
+                <option value="gbm">Glioblastoma IDH-wt</option>
+                <option value="astro2">Astrocitoma IDH-mut (gr 2)</option>
+                <option value="astro3">Astrocitoma IDH-mut (gr 3)</option>
+                <option value="astro4">Astrocitoma IDH-mut (gr 4)</option>
+                <option value="oligo2">Oligodendroglioma IDH-mut/1p19q-codel (gr 2)</option>
+                <option value="oligo3">Oligodendroglioma IDH-mut/1p19q-codel (gr 3)</option>
+              </select></div>
+            <div class="field"><label>Tipo de tumor
+              <span class="help">?<span class="tip">Tumor <b>captante puro</b>: apenas lesões com realce. <b>Misto</b>: captante + não captante. <b>Não captante puro</b>: típico de gliomas de baixo grau.</span></span>
+            </label>
+              <select id="tumorType">
+                <option value="enh">Captante puro</option>
+                <option value="mixed">Misto (captante + não captante)</option>
+                <option value="nonenh">Não captante puro</option>
+              </select></div>
+            <div class="field"><label>Fase clínica
+              <span class="help">?<span class="tip"><b>Recém-diagnosticado pós-RT/QT</b>: 1.º controlo idealmente ≥ 4 semanas após RT (este será o baseline).<br><b>Recidiva</b>: RM basal ≤ 2 semanas pré-Tx.<br><b>Vigilância</b>: tumor de baixo grau sem tratamento activo.</span></span>
+            </label>
+              <select id="phase">
+                <option value="newdx">Recém-diagnosticado · pós-RT/QT</option>
+                <option value="recurrent">Recidiva / progressão prévia</option>
+                <option value="watch">Vigilância / pré-tratamento</option>
+              </select></div>
+          </div>
+
+          <div class="grid-4" style="margin-top:14px">
+            <div class="field"><label>Modo de medição
+              <span class="help">?<span class="tip"><b>2D</b>: SPD = D1 × D2 (soma dos produtos perpendiculares). Limiares clássicos.<br><b>3D</b>: volume (D1×D2×D3). Limiares mais restritivos: PR ≤ −65%, PD ≥ +40%.</span></span>
+            </label>
+              <div class="seg" id="modeSeg" style="width:100%">
+                <button data-mode="2d" class="active" style="flex:1">2D</button>
+                <button data-mode="3d" style="flex:1">3D</button>
+              </div>
+            </div>
+            <div class="field"><label>Semanas pós-RT
+              <span class="help">?<span class="tip">Janela de risco para <b>pseudoprogressão</b>: &lt; 12 semanas pós-fim de RT, especialmente em campo de irradiação (até 30–40% nos GBM).</span></span>
+            </label><input id="wkPostRT" type="number" value="6"/></div>
+            <div class="field"><label>Lesão em campo de RT</label>
+              <select id="inField"><option value="yes">Sim</option><option value="no">Não</option></select></div>
+            <div class="field"><label>Protocolo MRI adequado
+              <span class="help">?<span class="tip">Protocolo BTIP / RANO: T1 pré e pós-contraste 3D, T2/FLAIR, DWI/ADC, perfusão (DSC/DCE). Se incompleto → exame <b>não avaliável</b>.</span></span>
+            </label>
+              <select id="protocol"><option value="yes">Sim</option><option value="no">Incompleto</option></select></div>
+          </div>
+
+          <div class="grid-4" style="margin-top:14px">
+            <div class="field"><label>Anti-angiogénico (bev)
+              <span class="help">?<span class="tip">Sob <b>bevacizumab</b>: a captação pode reduzir artificialmente (pseudoresposta). Avalia-se também o componente não captante. Persistência de ADC baixo e rCBV elevado sugere doença viável.</span></span>
+            </label>
+              <select id="antiang"><option value="no">Não</option><option value="yes">Sim</option></select></div>
+            <div class="field"><label>Imunoterapia (ICI)
+              <span class="help">?<span class="tip"><b>iRANO</b>: sob inibidores de checkpoint, progressão aparente sem deterioração clínica pode ser pseudoprogressão imuno-relacionada → RM de confirmação obrigatória.</span></span>
+            </label>
+              <select id="ici"><option value="no">Não</option><option value="yes">Sim</option></select></div>
+            <div class="field"><label>RM basal disponível
+              <span class="help">?<span class="tip">Em recidivas, RM basal ideal ≤ 2 semanas antes do início do tratamento. Se não houver → RM de confirmação obrigatória se progressão no 1.º controlo.</span></span>
+            </label>
+              <select id="hasBaseline"><option value="yes">Sim</option><option value="no">Não</option></select></div>
+            <div class="field"><label>Este exame é de confirmação?
+              <span class="help">?<span class="tip">Se a RM <b>actual</b> é a confirmação de uma progressão preliminar anterior e mostra crescimento adicional → PD validada (data = exame preliminar). Se estabilizou → pseudoprogressão.</span></span>
+            </label>
+              <select id="isConfirmation"><option value="no">Não</option><option value="yes">Sim</option></select></div>
+          </div>
+
+          <div class="nav-row">
+            <div></div>
+            <button class="btn" onclick="goStep(2)">Avançar para Medições →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2 — MEDIÇÕES -->
+    <section class="step-panel" data-step="2">
+      <div class="card">
+        <div class="hd">
+          <h2><span class="eyebrow">Etapa 2 / 5</span></h2>
+          <div class="sub">Medições do exame actual · SPD = D1 × D2 (cálculo automático)</div>
+        </div>
+        <div class="bd">
+
+          <div class="section-divider">
+            <span class="lbl">Lesões captantes</span>
+            <span class="help">?<span class="tip"><b>Como medir</b>: produto dos 2 diâmetros máximos perpendiculares no plano de maior extensão. <br><b>Evitar</b>: zonas necróticas, quísticas, gliose pós-cirúrgica, captação mal definida ou artefactos. <br><b>Máximo</b>: 3 lesões em tumor puro · 2+2 em tumor misto.</span></span>
+            <span class="chip">Mensurável ≥ 10 × 10 mm</span>
+            <div class="line"></div>
+          </div>
+
+          <table class="lesion-table" id="enhTbl">
+            <thead><tr><th class="ix">#</th><th>Localização</th><th>D1 (mm)</th><th>D2 (mm)</th>
+              <th class="d3-col" style="display:none">D3 (mm)</th><th>SPD <span class="help">?<span class="tip"><b>SPD</b> = D1 × D2. Cálculo automático.</span></span></th><th>Imagem-chave</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="sum-row">
+            <span class="k">SPD total · exame actual (captante)</span>
+            <span class="v mono" id="enhSum">0 <small style="font-size:11px;color:var(--muted)">mm²</small></span>
+          </div>
+
+          <div id="block-t2">
+            <div class="section-divider" style="margin-top:24px">
+              <span class="lbl">Lesões não captantes (T2 / FLAIR)</span>
+              <span class="help">?<span class="tip"><b>Não medir o edema.</b> Procurar hipersinal em parênquima previamente normal (córtex, tálamo) com efeito de massa ou restrição à difusão progressiva.</span></span>
+              <div class="line"></div>
+            </div>
+            <table class="lesion-table" id="t2Tbl">
+              <thead><tr><th class="ix">#</th><th>Localização</th><th>D1 (mm)</th><th>D2 (mm)</th>
+                <th class="d3-col" style="display:none">D3 (mm)</th><th>SPD</th><th>Imagem-chave</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <div class="sum-row">
+              <span class="k">SPD total · exame actual (T2/FLAIR)</span>
+              <span class="v mono" id="t2Sum">0 <small style="font-size:11px;color:var(--muted)">mm²</small></span>
+            </div>
+          </div>
+
+          <div class="nav-row">
+            <button class="btn ghost" onclick="goStep(1)">← Voltar</button>
+            <button class="btn" onclick="goStep(3)">Comparar com estudo de referência →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3 — COMPARAÇÃO -->
+    <section class="step-panel" data-step="3">
+      <div class="card">
+        <div class="hd">
+          <h2><span class="eyebrow">Etapa 3 / 5</span></h2>
+          <div class="sub">Introduz as medições do <span id="refStudyLabel">estudo baseline</span> para comparação automática</div>
+        </div>
+        <div class="bd">
+
+          <div class="section-divider">
+            <span class="lbl"><span id="refTitleEnh">Estudo Baseline · Lesões captantes</span></span>
+            <span class="help" id="refHelp">?<span class="tip" id="refTip"></span></span>
+            <div class="line"></div>
+          </div>
+
+          <table class="lesion-table" id="refEnhTbl">
+            <thead><tr><th class="ix">#</th><th>Localização</th><th>D1 (mm)</th><th>D2 (mm)</th>
+              <th class="d3-col" style="display:none">D3 (mm)</th><th>SPD</th><th>Imagem-chave</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="sum-row">
+            <span class="k">SPD total · referência (captante)</span>
+            <span class="v mono" id="refEnhSum">0 <small style="font-size:11px;color:var(--muted)">mm²</small></span>
+          </div>
+
+          <div id="block-ref-t2">
+            <div class="section-divider" style="margin-top:24px">
+              <span class="lbl"><span id="refTitleT2">Estudo Baseline · Lesões T2/FLAIR</span></span>
+              <div class="line"></div>
+            </div>
+            <table class="lesion-table" id="refT2Tbl">
+              <thead><tr><th class="ix">#</th><th>Localização</th><th>D1 (mm)</th><th>D2 (mm)</th>
+                <th class="d3-col" style="display:none">D3 (mm)</th><th>SPD</th><th>Imagem-chave</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <div class="sum-row">
+              <span class="k">SPD total · referência (T2/FLAIR)</span>
+              <span class="v mono" id="refT2Sum">0 <small style="font-size:11px;color:var(--muted)">mm²</small></span>
+            </div>
+          </div>
+
+          <!-- COMPARISON CARDS -->
+          <div class="section-divider" style="margin-top:24px">
+            <span class="lbl">Comparação automática</span>
+            <div class="line"></div>
+          </div>
+
+          <div class="compare">
+            <div class="col"><div class="lbl">Actual (captante)</div>
+              <div class="val" id="cmpNow">0</div></div>
+            <div class="arrow">→</div>
+            <div class="col"><div class="lbl" id="cmpRefLbl">Baseline (captante)</div>
+              <div class="val" id="cmpRef">0</div></div>
+          </div>
+          <div class="delta-card flat" id="deltaEnh">
+            <div class="pct" id="deltaEnhPct">0%</div>
+            <div class="txt" id="deltaEnhTxt">Sem dados.</div>
+          </div>
+
+          <div id="cmp-t2-wrap">
+            <div class="compare" style="margin-top:18px">
+              <div class="col"><div class="lbl">Actual (T2/FLAIR)</div>
+                <div class="val" id="cmpNowT2">0</div></div>
+              <div class="arrow">→</div>
+              <div class="col"><div class="lbl" id="cmpRefLblT2">Baseline (T2/FLAIR)</div>
+                <div class="val" id="cmpRefT2">0</div></div>
+            </div>
+            <div class="delta-card flat" id="deltaT2">
+              <div class="pct" id="deltaT2Pct">0%</div>
+              <div class="txt" id="deltaT2Txt">Sem dados.</div>
+            </div>
+          </div>
+
+          <div class="nav-row">
+            <button class="btn ghost" onclick="goStep(2)">← Voltar</button>
+            <button class="btn" onclick="goStep(4)">Avançar para Critérios →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4 — CRITÉRIOS EXTRA -->
+    <section class="step-panel" data-step="4">
+      <div class="card">
+        <div class="hd">
+          <h2><span class="eyebrow">Etapa 4 / 5</span></h2>
+          <div class="sub">Achados adicionais, estado clínico e corticoides</div>
+        </div>
+        <div class="bd">
+
+          <div class="section-divider"><span class="lbl">Achados radiológicos adicionais</span><div class="line"></div></div>
+          <div class="grid-4">
+            <div class="field"><label>Nova lesão mensurável</label>
+              <select id="newLesion"><option value="no">Não</option><option value="yes">Sim</option></select></div>
+            <div class="field"><label>Disseminação leptomeníngea
+              <span class="help">?<span class="tip">Disseminação leptomeníngea = <b>PD</b> por definição, independentemente das medições.</span></span>
+            </label>
+              <select id="lepto"><option value="no">Não</option><option value="yes">Sim</option></select></div>
+            <div class="field"><label>Lesão não-alvo
+              <span class="help">?<span class="tip">Progredem se: crescem <b>≥ 5 × 5 mm</b>, passam a ser mensuráveis, ou somadas às alvo cumprem limiar de PD.</span></span>
+            </label>
+              <select id="nontarget">
+                <option value="absent">Ausente / estável</option>
+                <option value="grew5">Crescimento ≥ 5×5 mm</option>
+                <option value="unequivocal">Progressão inequívoca</option>
+              </select></div>
+            <div class="field"><label>Não-mensurável → mensurável</label>
+              <select id="becameMeasurable"><option value="no">Não</option><option value="yes">Sim</option></select></div>
+          </div>
+
+          <div class="section-divider" style="margin-top:24px"><span class="lbl">Corticoides e clínica</span><div class="line"></div></div>
+          <div class="grid-4">
+            <div class="field"><label>Dex actual (mg/d)</label><input id="dexNow" type="number" step="0.5" value="2"/></div>
+            <div class="field"><label>Dex à RM basal (mg/d)
+              <span class="help">?<span class="tip">Aumento <b>&gt; 2 mg/d</b> de dex vs basal pode mascarar progressão → resposta radiológica degrada para SD.</span></span>
+            </label><input id="dexBase" type="number" step="0.5" value="4"/></div>
+            <div class="field"><label>Tendência vs basal</label>
+              <select id="steroidTrend">
+                <option value="off">Sem corticoides</option>
+                <option value="down">A reduzir</option>
+                <option value="stable">Estável</option>
+                <option value="up">A aumentar</option>
+              </select></div>
+            <div class="field"><label>Estado clínico / NANO</label>
+              <select id="clinical">
+                <option value="improved">Melhorado</option>
+                <option value="stable">Estável</option>
+                <option value="worse_explained">Pior — outra causa</option>
+                <option value="worse_unexplained">Pior — sem outra causa</option>
+              </select></div>
+          </div>
+
+          <div class="section-divider" style="margin-top:24px"><span class="lbl">Caracterização morfológica e funcional</span>
+            <span class="help">?<span class="tip">Estes campos não alteram a classificação RANO mas enriquecem o relatório para diferenciar tumor de radionecrose e descrever o resto do exame.</span></span>
+            <div class="line"></div></div>
+          <div class="grid-4">
+            <div class="field"><label>ADC da lesão
+              <span class="help">?<span class="tip"><b>Tumor activo</b>: tipicamente ADC <b>baixo</b> (restrição à difusão). <b>Radionecrose</b>: ADC habitualmente <b>alto</b> em zonas centrais necróticas.</span></span>
+            </label>
+              <select id="adcChar">
+                <option value="">—</option>
+                <option value="low">Baixo / restrição</option>
+                <option value="mixed">Misto</option>
+                <option value="high">Alto / facilitação</option>
+              </select></div>
+            <div class="field"><label>Perfusão (rCBV)
+              <span class="help">?<span class="tip"><b>rCBV elevado</b>: sugere tumor viável (neovascularização). <b>rCBV baixo</b>: sugere radionecrose / efeito de tratamento.</span></span>
+            </label>
+              <select id="perfusion">
+                <option value="">—</option>
+                <option value="elevated">Aumentada</option>
+                <option value="normal">Normal</option>
+                <option value="decreased">Diminuída</option>
+              </select></div>
+            <div class="field"><label>Sinal em T2</label>
+              <select id="t2Signal">
+                <option value="">—</option>
+                <option value="hyper">Hipersinal homogéneo</option>
+                <option value="mixed">Misto / heterogéneo</option>
+                <option value="hypo">Hipossinal central</option>
+              </select></div>
+            <div class="field"><label>Edema vasogénico</label>
+              <select id="edema">
+                <option value="">—</option>
+                <option value="increased">Aumentado</option>
+                <option value="stable">Estável</option>
+                <option value="decreased">Diminuído</option>
+                <option value="absent">Ausente</option>
+              </select></div>
+          </div>
+
+          <div class="grid-4" style="margin-top:14px">
+            <div class="field"><label>Padrão de realce
+              <span class="help">?<span class="tip"><b>Nodular/sólido</b> e <b>anelar de paredes espessas e irregulares</b>: favorecem tumor viável.<br><b>Anelar fino e regular</b>, em "queijo suíço" ou pontilhado difuso: mais sugestivo de radionecrose / efeito de tratamento.</span></span>
+            </label>
+              <select id="enhPattern">
+                <option value="">—</option>
+                <option value="nodular">Nodular / sólido</option>
+                <option value="ring_thick">Anelar de paredes espessas/irregulares</option>
+                <option value="ring_thin">Anelar fino e regular</option>
+                <option value="swiss">"Queijo suíço" / pontilhado difuso</option>
+                <option value="linear">Linear / dural</option>
+                <option value="absent">Ausente</option>
+              </select></div>
+            <div class="field"><label>Intensidade do realce vs prévio</label>
+              <select id="enhIntensity">
+                <option value="">—</option>
+                <option value="increased">Mais intenso</option>
+                <option value="stable">Sobreponível</option>
+                <option value="decreased">Menos intenso</option>
+              </select></div>
+            <div class="field"><label>Margens do realce</label>
+              <select id="enhMargins">
+                <option value="">—</option>
+                <option value="well">Bem definidas</option>
+                <option value="ill">Mal definidas / infiltrativas</option>
+              </select></div>
+            <div class="field"><label>Componente necrótico/quístico central</label>
+              <select id="necrosis">
+                <option value="">—</option>
+                <option value="absent">Ausente</option>
+                <option value="present">Presente</option>
+                <option value="increased">Aumentado vs prévio</option>
+              </select></div>
+          </div>
+
+          <div class="grid-2" style="margin-top:14px">
+            <div class="field"><label>Outros componentes captantes (não mensuráveis)
+              <span class="help">?<span class="tip">Captação adicional que não cumpre critérios de lesão mensurável (margens mal definidas ou &lt; 10 mm). Não entra nos critérios mas deve ser descrita.</span></span>
+            </label>
+              <textarea id="nonMeasEnh" rows="2" placeholder="ex. ténue captação nodular junto ao bordo posterior da loca, &lt; 5 mm"></textarea></div>
+            <div class="field"><label>Componentes não captantes suspeitos de tumor
+              <span class="help">?<span class="tip">Hipersinal T2/FLAIR em parênquima previamente normal, com efeito de massa, atingimento cortical ou restrição à difusão progressiva — sugestivo de tumor infiltrativo apesar de não cumprir critérios.</span></span>
+            </label>
+              <textarea id="nonEnhTumor" rows="2" placeholder="ex. hipersinal cortical insular com restrição à difusão, sem captação"></textarea></div>
+          </div>
+
+          <div class="grid-2" style="margin-top:14px">
+            <div class="field"><label>Loca cirúrgica / alterações pós-cirúrgicas</label>
+              <textarea id="surgCavity" rows="2" placeholder="ex. loca frontal direita sem realce nodular, sem restrição à difusão, com produtos hemáticos crónicos"></textarea></div>
+            <div class="field"><label>Outras alterações do exame</label>
+              <textarea id="otherFindings" rows="2" placeholder="ex. sistema ventricular conformado, sem desvio da linha média; sem outras lesões parenquimatosas"></textarea></div>
+          </div>
+
+          <div class="nav-row">
+            <button class="btn ghost" onclick="goStep(3)">← Voltar</button>
+            <button class="btn" onclick="goStep(5);run();">Classificar segundo RANO 2.0 →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5 — RESULTADO -->
+    <section class="step-panel" data-step="5">
+      <div class="card">
+        <div class="hd">
+          <h2><span class="eyebrow">Etapa 5 / 5</span></h2>
+          <div class="sub">Classificação RANO 2.0 e justificação clínica</div>
+        </div>
+        <div class="bd">
+
+          <div class="grid-2" style="grid-template-columns:1fr 1fr">
+            <div class="crit-card">
+              <h3>✓ Critérios cumpridos</h3>
+              <ul class="crit-list" id="critPos"><li><span class="ic i">·</span>—</li></ul>
+            </div>
+            <div class="crit-card">
+              <h3>✗ Critérios não cumpridos / ressalvas</h3>
+              <ul class="crit-list" id="critNeg"><li><span class="ic i">·</span>—</li></ul>
+            </div>
+          </div>
+
+          <div class="section-divider" style="margin-top:22px"><span class="lbl">Justificação · regras aplicadas</span><div class="line"></div></div>
+          <ul class="rules" id="rules"><li class="INFO"><span class="tag">INFO</span><span>Sem dados.</span></li></ul>
+
+          <div class="section-divider" style="margin-top:18px"><span class="lbl">Contrafactuais</span><div class="line"></div></div>
+          <ul class="rules" id="cf"><li class="INFO"><span class="tag">INFO</span><span>—</span></li></ul>
+
+          <div class="section-divider" style="margin-top:18px"><span class="lbl">Relatório estruturado</span>
+            <div class="line"></div>
+            <button class="btn secondary sm" onclick="copyReport()">Copiar</button></div>
+          <div class="report" id="report">—</div>
+
+          <div class="nav-row">
+            <button class="btn ghost" onclick="goStep(4)">← Voltar</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn ghost sm" onclick="loadDemo('A')">Ex. A · pseudoprog</button>
+              <button class="btn ghost sm" onclick="loadDemo('B')">Ex. B · bev</button>
+              <button class="btn ghost sm" onclick="loadDemo('C')">Ex. C · LGG</button>
+              <button class="btn ghost sm" onclick="loadDemo('D')">Ex. D · iRANO</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ STICKY SIDEBAR — RESULTADO ============ -->
+  <aside class="sidebar">
+
+    <div class="result">
+      <div class="eyebrow">Classificação RANO 2.0</div>
+      <div class="cat NE" id="r-cat">—</div>
+      <div class="summary" id="r-summary">Preenche os dados para classificar.</div>
+      <div class="badges" id="r-badges"></div>
+      <div class="conf">
+        <div class="conf-lbl"><span>Confiança</span><span id="r-conf-pct">0%</span></div>
+        <div class="conf-bar"><i id="r-conf" style="width:0%"></i></div>
+      </div>
+    </div>
+
+    <div class="crit-card">
+      <h3>Métricas-chave</h3>
+      <div id="r-metrics" style="display:flex;flex-wrap:wrap;gap:6px">—</div>
+    </div>
+
+    <div class="crit-card">
+      <h3>Limiares aplicados</h3>
+      <ul class="crit-list" id="r-thresh"><li><span class="ic i">·</span>—</li></ul>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+/* =========================================================
+   Tooltip positioning (flip / clamp dentro do viewport)
+   ========================================================= */
+document.addEventListener('mouseover', e=>{
+  const h = e.target.closest('.help'); if(!h) return;
+  const tip = h.querySelector('.tip'); if(!tip) return;
+  const trig = h.getBoundingClientRect();
+  tip.style.opacity = '0';
+  tip.style.left = '0px'; tip.style.top = '0px';
+  // Render para medir
+  requestAnimationFrame(()=>{
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = trig.left + trig.width/2 - tw/2;
+    let y = trig.top - th - 10;
+    if(y < 8) y = trig.bottom + 10;            // flip para baixo se sai do topo
+    if(x < 8) x = 8;                            // clamp esquerda
+    if(x + tw > vw - 8) x = vw - tw - 8;        // clamp direita
+    tip.style.left = x + 'px';
+    tip.style.top  = y + 'px';
+    tip.style.opacity = '1';
+  });
+});
+document.addEventListener('mouseout', e=>{
+  const h = e.target.closest('.help'); if(!h) return;
+  const tip = h.querySelector('.tip'); if(tip) tip.style.opacity = '0';
+});
+
+/* =========================================================
+   Estado geral
+   ========================================================= */
+let MODE = '2d';
+let GOAL = 'response';   // 'response' (vs baseline) | 'progression' (vs nadir)
+let STEP = 1;
+
+/* ---------- Stepper ---------- */
+document.querySelectorAll('.step').forEach(s=>{
+  s.addEventListener('click',()=>goStep(parseInt(s.dataset.step)));
+});
+function goStep(n){
+  STEP = n;
+  document.querySelectorAll('.step').forEach(s=>{
+    const i=parseInt(s.dataset.step);
+    s.classList.toggle('active', i===n);
+    s.classList.toggle('done', i<n);
+  });
+  document.querySelectorAll('.step-panel').forEach(p=>{
+    p.classList.toggle('active', parseInt(p.dataset.step)===n);
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------- Goal ---------- */
+function setGoal(g){
+  GOAL = g;
+  document.querySelectorAll('.goal .opt').forEach(o=>o.classList.toggle('active', o.dataset.goal===g));
+  updateRefLabels();
+  recalcAll();
+}
+function updateRefLabels(){
+  const isProg = GOAL==='progression';
+  const refName = isProg ? 'Estudo Nadir' : 'Estudo Baseline';
+  document.getElementById('refStudyLabel').textContent = isProg ? 'estudo nadir' : 'estudo baseline';
+  document.getElementById('refTitleEnh').textContent = refName + ' · Lesões captantes';
+  document.getElementById('refTitleT2').textContent  = refName + ' · Lesões T2/FLAIR';
+  document.getElementById('cmpRefLbl').textContent   = (isProg?'Nadir':'Baseline')+' (captante)';
+  document.getElementById('cmpRefLblT2').textContent = (isProg?'Nadir':'Baseline')+' (T2/FLAIR)';
+  document.getElementById('refTip').innerHTML = isProg
+    ? '<b>Nadir</b>: exame com o <b>menor SPD</b> obtido durante o seguimento, desde o baseline. É a referência para avaliar progressão (PD = ≥ +25% 2D / +40% 3D vs nadir).'
+    : '<b>Baseline</b>: em recém-diagnosticado pós-RT é o <b>1.º controlo pós-RT</b> (≥ 4 sem). Em recidiva, idealmente ≤ 2 sem antes do início do tratamento. <b>Não usar</b> RM pós-operatória imediata.';
+}
+
+/* ---------- Modo 2D/3D ---------- */
+document.querySelectorAll('#modeSeg button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('active',x===b));
+  MODE = b.dataset.mode;
+  const show = MODE==='3d';
+  document.querySelectorAll('.d3-col').forEach(c=>c.style.display = show?'':'none');
+  document.querySelectorAll('[data-k="d3-cell"]').forEach(c=>c.style.display = show?'':'none');
+  recalcAll();
+}));
+
+/* ---------- Build tables ---------- */
+function buildTable(id, n){
+  const tb=document.querySelector('#'+id+' tbody');
+  for(let i=1;i<=(n||3);i++){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="ix">L${i}</td>
+      <td><input data-k="loc" placeholder="ex. frontal D"/></td>
+      <td><input type="number" data-k="d1" min="0" step="0.1" placeholder="mm"/></td>
+      <td><input type="number" data-k="d2" min="0" step="0.1" placeholder="mm"/></td>
+      <td data-k="d3-cell" class="d3-col" style="display:none"><input type="number" data-k="d3" min="0" step="0.1" placeholder="mm"/></td>
+      <td class="read" data-k="prod">0</td>
+      <td><input data-k="img" placeholder="ex. série 5 / im 23"/></td>`;
+    tb.appendChild(tr);
+  }
+}
+buildTable('enhTbl'); buildTable('t2Tbl');
+buildTable('refEnhTbl'); buildTable('refT2Tbl');
+
+/* live-recalc */
+document.addEventListener('input', e=>{
+  if(e.target.matches('input[data-k="d1"],input[data-k="d2"],input[data-k="d3"]')){
+    recalcAll();
+  }
+});
+
+function readTable(id){
+  return [...document.querySelectorAll('#'+id+' tbody tr')].map(tr=>{
+    const d1=parseFloat(tr.querySelector('[data-k="d1"]').value)||0;
+    const d2=parseFloat(tr.querySelector('[data-k="d2"]').value)||0;
+    const d3=parseFloat(tr.querySelector('[data-k="d3"]').value)||0;
+    const p = MODE==='3d' ? (d1*d2*d3) : (d1*d2);
+    tr.querySelector('[data-k="prod"]').textContent = p ? p.toFixed(0) : '0';
+    const minOk = MODE==='3d' ? (d1>=10&&d2>=10&&d3>=10) : (d1>=10&&d2>=10);
+    const loc = tr.querySelector('[data-k="loc"]')?.value || '';
+    const img = tr.querySelector('[data-k="img"]')?.value || '';
+    return {d1,d2,d3,p,measurable:minOk,loc,img};
+  });
+}
+const sumProd = rows => rows.reduce((a,x)=>a+(x.p||0),0);
+
+function fmtSum(v){ const U=MODE==='3d'?'mm³':'mm²';
+  return `${v.toFixed(0)} <small style="font-size:11px;color:var(--muted)">${U}</small>`; }
+
+function recalcAll(){
+  const e=readTable('enhTbl'), t=readTable('t2Tbl'),
+        re=readTable('refEnhTbl'), rt=readTable('refT2Tbl');
+  const eS=sumProd(e), tS=sumProd(t), reS=sumProd(re), rtS=sumProd(rt);
+  document.getElementById('enhSum').innerHTML  = fmtSum(eS);
+  document.getElementById('t2Sum').innerHTML   = fmtSum(tS);
+  document.getElementById('refEnhSum').innerHTML = fmtSum(reS);
+  document.getElementById('refT2Sum').innerHTML  = fmtSum(rtS);
+
+  // Comparison cards
+  const U = MODE==='3d'?'mm³':'mm²';
+  document.getElementById('cmpNow').textContent  = eS.toFixed(0);
+  document.getElementById('cmpRef').textContent  = reS.toFixed(0);
+  document.getElementById('cmpNowT2').textContent= tS.toFixed(0);
+  document.getElementById('cmpRefT2').textContent= rtS.toFixed(0);
+
+  renderDelta('deltaEnh','deltaEnhPct','deltaEnhTxt',eS,reS,'captante');
+  renderDelta('deltaT2','deltaT2Pct','deltaT2Txt',tS,rtS,'T2/FLAIR');
+
+  // Hide T2 blocks when not applicable
+  const ent=document.getElementById('entity').value;
+  const tt=document.getElementById('tumorType').value;
+  const ant=document.getElementById('antiang').value==='yes';
+  const evalNonEnh = (ent!=='gbm') || ant;
+  const showT2 = (tt!=='enh') && evalNonEnh;
+  const showEnh= (tt!=='nonenh');
+  document.getElementById('block-t2').style.display       = showT2 ? '' : 'none';
+  document.getElementById('block-ref-t2').style.display   = showT2 ? '' : 'none';
+  document.getElementById('cmp-t2-wrap').style.display    = showT2 ? '' : 'none';
+  document.querySelector('#enhTbl').parentElement.querySelector  // no-op
+}
+
+function renderDelta(cardId,pctId,txtId,now,ref,what){
+  const card=document.getElementById(cardId);
+  const pctEl=document.getElementById(pctId);
+  const txtEl=document.getElementById(txtId);
+  if(!ref){
+    card.className='delta-card flat';
+    pctEl.textContent='—';
+    txtEl.innerHTML=`Sem dados de referência ${what}.`;
+    return;
+  }
+  const d = ((now-ref)/ref)*100;
+  const refName = GOAL==='progression'?'nadir':'baseline';
+  if(d > 2){
+    card.className='delta-card up';
+    pctEl.textContent='+'+d.toFixed(1)+'%';
+    txtEl.innerHTML=`<b>Aumento de ${d.toFixed(1)}%</b> do componente ${what} relativamente ao ${refName}.`;
+  } else if(d < -2){
+    card.className='delta-card down';
+    pctEl.textContent=d.toFixed(1)+'%';
+    txtEl.innerHTML=`<b>Redução de ${Math.abs(d).toFixed(1)}%</b> do componente ${what} relativamente ao ${refName}.`;
+  } else {
+    card.className='delta-card flat';
+    pctEl.textContent=d.toFixed(1)+'%';
+    txtEl.innerHTML=`Variação mínima (${d.toFixed(1)}%) do componente ${what} — sem alteração significativa.`;
+  }
+}
+
+['entity','tumorType','antiang'].forEach(id=>document.getElementById(id).addEventListener('change',recalcAll));
+
+/* =========================================================
+   Motor RANO 2.0
+   (mesma lógica das versões anteriores, agora puxa SPDs das tabelas)
+   ========================================================= */
+const val=id=>document.getElementById(id).value;
+const num=id=>parseFloat(val(id))||0;
+
+function classify(){
+  const enh=sumProd(readTable('enhTbl'));
+  const t2 =sumProd(readTable('t2Tbl'));
+  const refE=sumProd(readTable('refEnhTbl'));
+  const refT=sumProd(readTable('refT2Tbl'));
+
+  const isProg = GOAL==='progression';
+  // Vs baseline (resposta) e vs nadir (progressão) — se utilizador escolhe um, calcula os dois,
+  // mas o exame de "referência" introduzido é interpretado conforme o goal escolhido.
+  const baseE = isProg ? 0 : refE;
+  const nadirE= isProg ? refE : 0;
+  const baseT = isProg ? 0 : refT;
+  const nadirT= isProg ? refT : 0;
+
+  const dBaseE  = baseE  ? ((enh-baseE )/baseE )*100 : 0;
+  const dNadirE = nadirE ? ((enh-nadirE)/nadirE)*100 : 0;
+  const dBaseT  = baseT  ? ((t2 -baseT )/baseT )*100 : 0;
+  const dNadirT = nadirT ? ((t2 -nadirT)/nadirT)*100 : 0;
+
+  const ctx={
+    mode:MODE,
+    entity:val('entity'), tumorType:val('tumorType'),
+    phase:val('phase'), wkPostRT:num('wkPostRT'),
+    antiang:val('antiang')==='yes', ici:val('ici')==='yes',
+    inField:val('inField')==='yes',
+    nontarget:val('nontarget'), newLesion:val('newLesion')==='yes',
+    lepto:val('lepto')==='yes', becameMeas:val('becameMeasurable')==='yes',
+    isConfirm:val('isConfirmation')==='yes', hasBaseline:val('hasBaseline')==='yes',
+    steroid:val('steroidTrend'), dexNow:num('dexNow'), dexBase:num('dexBase'),
+    clinical:val('clinical'), protocol:val('protocol')==='yes'
+  };
+
+  const PR_RESP = ctx.mode==='3d' ? -65 : -50;
+  const PD_GROW = ctx.mode==='3d' ?  40 :  25;
+  const MR_HI   = ctx.mode==='3d' ? -40 : -25;
+  const MR_LO   = ctx.mode==='3d' ? -65 : -50;
+
+  const evalNonEnh = (ctx.entity!=='gbm') || ctx.antiang;
+  const tumorHasEnh = ctx.tumorType!=='nonenh';
+  const tumorHasNonEnh = (ctx.tumorType!=='enh') && evalNonEnh;
+
+  const fired=[], cf=[], pos=[], neg=[];
+  let cat='SD', confirm=false, conf=0.78;
+
+  if(!ctx.protocol){
+    fired.push({tag:'NE',txt:'Protocolo MRI incompleto / não conforme BTIP — exame <b>não avaliável</b>.'});
+    return {cat:'NE',fired,cf:[],pos:[],neg:[{ic:'n',t:'Protocolo MRI incompleto'}],
+            conf:0.2,confirm:false,
+            metrics:{enh,t2,dBaseE,dNadirE,dBaseT,dNadirT,mode:ctx.mode,PR_RESP,PD_GROW,MR_HI,MR_LO}};
+  }
+
+  const enhProg    = tumorHasEnh    && dNadirE >= PD_GROW;
+  const nonEnhProg = tumorHasNonEnh && dNadirT >= PD_GROW;
+  const pdFlags=[];
+  if(enhProg && ctx.steroid!=='up')
+    pdFlags.push(`Captante <code>+${dNadirE.toFixed(1)}%</code> vs nadir (limiar PD ${PD_GROW}% ${ctx.mode.toUpperCase()}).`);
+  if(nonEnhProg)
+    pdFlags.push(`T2/FLAIR <code>+${dNadirT.toFixed(1)}%</code> vs nadir.`);
+  if(ctx.newLesion){ pdFlags.push('Nova lesão mensurável.'); }
+  if(ctx.lepto)    { pdFlags.push('Disseminação leptomeníngea — PD por definição.'); }
+  if(ctx.nontarget==='unequivocal') pdFlags.push('Progressão inequívoca não-alvo.');
+  if(ctx.nontarget==='grew5')       pdFlags.push('Lesão não-alvo ≥ 5×5 mm.');
+  if(ctx.becameMeas)                pdFlags.push('Lesão não mensurável passou a mensurável.');
+  if(ctx.clinical==='worse_unexplained') pdFlags.push('Deterioração clínica não explicada.');
+
+  const dexDelta = ctx.dexNow - ctx.dexBase;
+  const steroidIncreaseSignificant = dexDelta > 2;
+  const steroidDecreaseBelowNadir  = ctx.steroid==='down' || ctx.steroid==='off';
+
+  if(pdFlags.length){
+    const hardPD = ctx.lepto || ctx.clinical==='worse_unexplained';
+    if(!hardPD && ctx.phase==='newdx' && ctx.wkPostRT<12 && ctx.inField){
+      cat='EQ'; confirm=true; conf=0.62;
+      fired.push({tag:'EQ',txt:'Critérios de PD cumpridos <b>mas</b> &lt; 12 semanas pós-RT em campo de irradiação → <b>possível pseudoprogressão</b>. RM de confirmação em ≥ 4 semanas.'});
+      pdFlags.forEach(f=>{fired.push({tag:'INFO',txt:f}); neg.push({ic:'w',t:f.replace(/<[^>]+>/g,'')});});
+    } else if(!hardPD && ctx.ici && ctx.clinical!=='worse_unexplained'){
+      cat='EQ'; confirm=true; conf=0.6;
+      fired.push({tag:'EQ',txt:'PD sob ICI sem deterioração clínica → possível <b>pseudoprogressão imuno-relacionada (iRANO)</b>. Confirmar.'});
+      pdFlags.forEach(f=>{fired.push({tag:'INFO',txt:f}); neg.push({ic:'w',t:f.replace(/<[^>]+>/g,'')});});
+    } else if(!hardPD && ctx.phase==='recurrent' && !ctx.hasBaseline){
+      cat='EQ'; confirm=true; conf=0.65;
+      fired.push({tag:'EQ',txt:'Recidiva sem RM basal ≤ 2 semanas pré-Tx — necessário <b>exame de confirmação</b> para validar PD.'});
+      pdFlags.forEach(f=>{fired.push({tag:'INFO',txt:f}); neg.push({ic:'w',t:f.replace(/<[^>]+>/g,'')});});
+    } else {
+      cat='PD';
+      confirm = ctx.isConfirm ? false : ((ctx.phase==='newdx' && ctx.wkPostRT<12) || ctx.ici);
+      conf=0.9;
+      if(ctx.isConfirm) fired.push({tag:'PD',txt:'Exame de confirmação valida progressão — data PD = exame preliminar.'});
+      pdFlags.forEach(f=>{fired.push({tag:'PD',txt:f}); pos.push({ic:'n',t:f.replace(/<[^>]+>/g,'')});});
+      if(confirm) fired.push({tag:'WARN',txt:'RM de confirmação requerida.'});
+      if(steroidDecreaseBelowNadir && ctx.clinical!=='worse_unexplained'){
+        cat='SD'; confirm=false; conf=0.7;
+        fired.length=0; pos.length=0; neg.length=0;
+        fired.push({tag:'WARN',txt:'Agravamento radiológico com redução de corticoides → reclassificado como SD.'});
+      }
+    }
+  } else {
+    const clinOK = (ctx.clinical==='stable'||ctx.clinical==='improved');
+    const stsOK  = ctx.steroid!=='up';
+    const enhCR = tumorHasEnh ? (enh===0) : true;
+    const enhPR = tumorHasEnh ? (dBaseE<=PR_RESP) : true;
+    const t2CR  = tumorHasNonEnh ? (t2===0) : true;
+    const t2PR  = tumorHasNonEnh ? (dBaseT<=PR_RESP) : true;
+    const t2MR  = tumorHasNonEnh ? (dBaseT<=MR_HI && dBaseT>MR_LO) : false;
+
+    if(enhCR && t2CR && ctx.nontarget==='absent' && ctx.steroid==='off' && clinOK && !ctx.newLesion){
+      cat='CR'; confirm=true; conf=0.92;
+      fired.push({tag:'CR',txt:'Desaparecimento de toda a doença, sem corticoides, clínica estável/melhor → <b>Resposta Completa</b>.'});
+      pos.push({ic:'y',t:'Desaparecimento de toda a doença alvo'});
+      pos.push({ic:'y',t:'Sem corticoides'});
+      pos.push({ic:'y',t:'Clínica estável ou melhor'});
+    } else if(enhPR && t2PR && !ctx.newLesion && stsOK && clinOK){
+      cat='PR'; confirm=true; conf=0.86;
+      fired.push({tag:'PR',txt:`Redução ≥ ${Math.abs(PR_RESP)}% (${ctx.mode.toUpperCase()}) vs basal → <b>Resposta Parcial</b>.`});
+      if(tumorHasEnh) pos.push({ic:'y',t:`Captante ${dBaseE.toFixed(1)}% (limiar PR ${PR_RESP}%)`});
+      if(tumorHasNonEnh) pos.push({ic:'y',t:`Não captante ${dBaseT.toFixed(1)}%`});
+      pos.push({ic:'y',t:'Sem novas lesões'});
+      pos.push({ic:'y',t:'Corticoides estáveis/redução'});
+      if(ctx.antiang) fired.push({tag:'WARN',txt:'Anti-angiogénico: confirmar que T2/FLAIR não piora (pseudoresposta).'});
+    } else if(t2MR && (!tumorHasEnh || ctx.tumorType==='mixed') && stsOK && clinOK && !ctx.newLesion){
+      cat='MR'; confirm=true; conf=0.78;
+      fired.push({tag:'MR',txt:`Componente não captante reduziu ${Math.abs(MR_HI)}–${Math.abs(MR_LO)}% (${ctx.mode.toUpperCase()}) → <b>Resposta Minor</b>.`});
+      pos.push({ic:'y',t:`T2/FLAIR ${dBaseT.toFixed(1)}% (limiar minor)`});
+    } else {
+      cat='SD'; conf=0.78;
+      fired.push({tag:'INFO',txt:`Não atinge limiares de PR/MR nem de PD → <b>Doença Estável</b>.`});
+      if(tumorHasEnh) neg.push({ic:'i',t:`Δ captante vs basal: ${dBaseE.toFixed(1)}% (PR ≤ ${PR_RESP}%)`});
+      if(tumorHasEnh) neg.push({ic:'i',t:`Δ captante vs nadir: ${dNadirE.toFixed(1)}% (PD ≥ ${PD_GROW}%)`});
+    }
+
+    if((cat==='CR'||cat==='PR'||cat==='MR') && steroidIncreaseSignificant){
+      fired.push({tag:'WARN',txt:`Dex actual (${ctx.dexNow}) &gt; 2 mg superior à basal (${ctx.dexBase}) → reclassificado como SD.`});
+      cat='SD'; confirm=false; conf=0.7;
+    }
+    if(cat==='CR' && ctx.steroid!=='off'){
+      cat='PR';
+      fired.push({tag:'WARN',txt:'CR exige ausência de corticoides — reduzido para PR.'});
+    }
+  }
+
+  // Counterfactuais
+  if(cat==='PD' && ctx.phase==='newdx' && ctx.wkPostRT<12 && !ctx.inField)
+    cf.push({tag:'INFO',txt:'Se a lesão estivesse no campo de RT → seria Equívoco (pseudoprogressão).'});
+  if(cat==='PR' && ctx.antiang)
+    cf.push({tag:'INFO',txt:'Sob bev, ADC baixo e rCBV elevado persistentes sugeririam pseudoresposta.'});
+  if(cat==='EQ') cf.push({tag:'INFO',txt:'Confirmação que cresce → PD validada; estabilidade → pseudoprogressão.'});
+  if(!cf.length) cf.push({tag:'INFO',txt:'Sem contrafactuais relevantes.'});
+
+  return {cat,fired,cf,pos,neg,confirm,conf,
+          metrics:{enh,t2,dBaseE,dNadirE,dBaseT,dNadirT,mode:ctx.mode,PR_RESP,PD_GROW,MR_HI,MR_LO}};
+}
+
+/* ---------- Render ---------- */
+const LABEL={CR:'Resposta Completa',PR:'Resposta Parcial',MR:'Resposta Minor',
+             SD:'Doença Estável',PD:'Progressão',EQ:'Equívoco / Pseudoprog.',NE:'Não avaliável'};
+const PILL_KIND={CR:'ok',PR:'ok',MR:'minor',SD:'neutral',PD:'bad',EQ:'equiv',NE:'neutral'};
+
+function renderRules(id,items){
+  document.getElementById(id).innerHTML = items.map(r=>
+    `<li class="${r.tag}"><span class="tag">${r.tag}</span><span>${r.txt}</span></li>`).join('');
+}
+function renderCrits(id,items){
+  if(!items.length) items=[{ic:'i',t:'—'}];
+  document.getElementById(id).innerHTML = items.map(i=>
+    `<li><span class="ic ${i.ic}">${i.ic==='y'?'✓':i.ic==='n'?'✗':i.ic==='w'?'!':'·'}</span><span>${i.t}</span></li>`).join('');
+}
+
+function run(){
+  recalcAll();
+  const r=classify(), m=r.metrics, U=m.mode==='3d'?'mm³':'mm²';
+
+  // Sidebar result
+  const vc=document.getElementById('r-cat');
+  vc.className='cat '+r.cat; vc.textContent=LABEL[r.cat];
+  document.getElementById('r-summary').innerHTML = r.fired[0]?r.fired[0].txt:'—';
+  document.getElementById('r-conf').style.width = Math.round(r.conf*100)+'%';
+  document.getElementById('r-conf-pct').textContent = Math.round(r.conf*100)+'%';
+
+  const badges=[];
+  badges.push(`<span class="pill ${PILL_KIND[r.cat]}"><span class="dot"></span>${LABEL[r.cat]}</span>`);
+  if(r.confirm) badges.push('<span class="pill equiv"><span class="dot"></span>RM de confirmação</span>');
+  badges.push(`<span class="pill neutral">Modo ${m.mode.toUpperCase()}</span>`);
+  document.getElementById('r-badges').innerHTML = badges.join('');
+
+  document.getElementById('r-metrics').innerHTML =
+    [['Capt.',m.enh.toFixed(0)+' '+U],
+     ['Δ capt. basal',m.dBaseE.toFixed(1)+'%'],
+     ['Δ capt. nadir',m.dNadirE.toFixed(1)+'%'],
+     ['T2',m.t2.toFixed(0)+' '+U],
+     ['Δ T2 basal',m.dBaseT.toFixed(1)+'%']]
+    .map(([k,v])=>`<span class="chip">${k}:<b>${v}</b></span>`).join('');
+
+  renderCrits('r-thresh',[
+    {ic:'i',t:`PR (vs basal): ≤ ${m.PR_RESP}%`},
+    {ic:'i',t:`PD (vs nadir): ≥ +${m.PD_GROW}%`},
+    {ic:'i',t:`Resposta Minor: ${m.MR_LO}% a ${m.MR_HI}% (não captante)`}
+  ]);
+  renderCrits('critPos', r.pos);
+  renderCrits('critNeg', r.neg);
+  renderRules('rules', r.fired);
+  renderRules('cf', r.cf);
+
+  document.getElementById('report').textContent = buildReport(r,m,U);
+}
+
+/* =========================================================
+   Construção do relatório estruturado (formato clínico)
+   ========================================================= */
+function buildReport(r,m,U){
+  const enhRows = readTable('enhTbl');
+  const t2Rows  = readTable('t2Tbl');
+  const refEnh  = readTable('refEnhTbl');
+  const refT2   = readTable('refT2Tbl');
+  const dNow    = val('dateNow')   || '—';
+  const dBase   = val('dateBase')  || '—';
+  const dNadir  = val('dateNadir') || '—';
+  const refKind = GOAL==='progression' ? 'NADIR' : 'BASELINE';
+  const refDate = GOAL==='progression' ? dNadir : dBase;
+
+  // Lesões captantes — descrição por localização
+  const lesionLines = [];
+  enhRows.forEach((row,i)=>{
+    if(!row.d1 && !row.d2) return;
+    const ref = refEnh[i] || {p:0};
+    const dim = MODE==='3d' ? `${row.d1}×${row.d2}×${row.d3} mm` : `${row.d1}×${row.d2} mm`;
+    const refDim = ref.d1 ? (MODE==='3d'? `${ref.d1}×${ref.d2}×${ref.d3} mm` : `${ref.d1}×${ref.d2} mm`) : '—';
+    const dl = ref.p ? (((row.p-ref.p)/ref.p)*100).toFixed(1)+'%' : 's/ ref.';
+    const direction = ref.p ? (row.p>ref.p?'aumento':row.p<ref.p?'redução':'sem alteração') : '—';
+    lesionLines.push(
+`  L${i+1} · ${row.loc||'localização não especificada'}${row.img?` (img-chave: ${row.img})`:''}
+       Actual  : ${dim}   SPD ${row.p.toFixed(0)} ${U}
+       ${refKind.toLowerCase()} : ${refDim}   SPD ${ref.p.toFixed(0)} ${U}
+       Variação: ${direction} de ${dl}`);
+  });
+
+  // Lesões T2/FLAIR
+  const t2Lines = [];
+  t2Rows.forEach((row,i)=>{
+    if(!row.d1 && !row.d2) return;
+    const ref = refT2[i] || {p:0};
+    const dim = MODE==='3d' ? `${row.d1}×${row.d2}×${row.d3} mm` : `${row.d1}×${row.d2} mm`;
+    const refDim = ref.d1 ? (MODE==='3d'? `${ref.d1}×${ref.d2}×${ref.d3} mm` : `${ref.d1}×${ref.d2} mm`) : '—';
+    const dl = ref.p ? (((row.p-ref.p)/ref.p)*100).toFixed(1)+'%' : 's/ ref.';
+    t2Lines.push(
+`  L${i+1} · ${row.loc||'localização não especificada'}${row.img?` (img-chave: ${row.img})`:''}
+       Actual: ${dim} (SPD ${row.p.toFixed(0)} ${U}) · ${refKind.toLowerCase()}: ${refDim} (SPD ${ref.p.toFixed(0)} ${U}) · Δ ${dl}`);
+  });
+
+  // Caracterização morfológica/funcional
+  const adcMap   ={low:'baixo, sugestivo de tumor viável',mixed:'misto',high:'alto, compatível com necrose / efeito de tratamento'};
+  const perfMap  ={elevated:'aumentada (rCBV ↑) — sugestivo de tumor viável',normal:'normal',decreased:'diminuída — sugestiva de radionecrose'};
+  const t2Map    ={hyper:'hipersinal homogéneo',mixed:'heterogéneo',hypo:'hipossinal central'};
+  const edemaMap ={increased:'aumentado',stable:'estável',decreased:'diminuído',absent:'ausente'};
+
+  const enhPatMap ={
+    nodular:'nodular / sólido — sugestivo de tumor viável',
+    ring_thick:'anelar de paredes espessas e irregulares — sugestivo de tumor viável',
+    ring_thin:'anelar fino e regular — mais compatível com radionecrose',
+    swiss:'em "queijo suíço" / pontilhado difuso — mais compatível com radionecrose',
+    linear:'linear / dural',
+    absent:'ausente'
+  };
+  const enhIntMap   ={increased:'mais intenso vs prévio',stable:'sobreponível vs prévio',decreased:'menos intenso vs prévio'};
+  const marginsMap  ={well:'bem definidas',ill:'mal definidas / infiltrativas'};
+  const necrosisMap ={absent:'sem componente necrótico/quístico',present:'componente necrótico/quístico central',increased:'componente necrótico/quístico aumentado vs prévio'};
+
+  const charLines = [];
+  if(val('enhPattern'))   charLines.push(`  Padrão de realce  : ${enhPatMap[val('enhPattern')]}`);
+  if(val('enhIntensity')) charLines.push(`  Intensidade       : ${enhIntMap[val('enhIntensity')]}`);
+  if(val('enhMargins'))   charLines.push(`  Margens do realce : ${marginsMap[val('enhMargins')]}`);
+  if(val('necrosis'))     charLines.push(`  Necrose / quisto  : ${necrosisMap[val('necrosis')]}`);
+  if(val('adcChar'))      charLines.push(`  ADC da lesão      : ${adcMap[val('adcChar')]}`);
+  if(val('perfusion'))    charLines.push(`  Perfusão          : ${perfMap[val('perfusion')]}`);
+  if(val('t2Signal'))     charLines.push(`  Sinal T2          : ${t2Map[val('t2Signal')]}`);
+  if(val('edema'))        charLines.push(`  Edema             : ${edemaMap[val('edema')]} em relação à lesão`);
+
+  // Pista tumor vs radionecrose combinando padrão de realce + ADC + perfusão
+  const tumorFeatures = (
+    (['nodular','ring_thick'].includes(val('enhPattern'))?1:0) +
+    (val('adcChar')==='low'?1:0) +
+    (val('perfusion')==='elevated'?1:0)
+  );
+  const radioFeatures = (
+    (['ring_thin','swiss'].includes(val('enhPattern'))?1:0) +
+    (val('adcChar')==='high'?1:0) +
+    (val('perfusion')==='decreased'?1:0)
+  );
+  const radionecrosisHint =
+    (tumorFeatures>=2 && tumorFeatures>radioFeatures) ? '  → Conjunto de achados favorece TUMOR VIÁVEL.' :
+    (radioFeatures>=2 && radioFeatures>tumorFeatures) ? '  → Conjunto de achados favorece RADIONECROSE / efeito de tratamento.' :
+    (tumorFeatures && radioFeatures) ? '  → Achados mistos — diferenciação tumor vs radionecrose inconclusiva.' :
+    '';
+
+  const extras = [];
+  if(val('nonMeasEnh').trim())    extras.push(`OUTROS COMPONENTES CAPTANTES (não mensuráveis)\n  ${val('nonMeasEnh').trim()}\n  Nota: não entram nos critérios RANO 2.0 mas devem ser monitorizados.`);
+  if(val('nonEnhTumor').trim())   extras.push(`COMPONENTES NÃO CAPTANTES SUSPEITOS DE TUMOR\n  ${val('nonEnhTumor').trim()}\n  Nota: não entram nos critérios RANO 2.0; achados sugerem infiltração tumoral.`);
+  if(val('surgCavity').trim())    extras.push(`LOCA CIRÚRGICA / ALTERAÇÕES PÓS-CIRÚRGICAS\n  ${val('surgCavity').trim()}`);
+  if(val('otherFindings').trim()) extras.push(`OUTRAS ALTERAÇÕES DO EXAME\n  ${val('otherFindings').trim()}`);
+
+  return (
+`RELATÓRIO ESTRUTURADO — RANO 2.0
+================================
+
+ESTUDOS COMPARADOS
+  Exame actual  : ${dNow}
+  Baseline      : ${dBase}
+  Nadir         : ${dNadir}
+  Referência    : ${refKind} (${refDate})
+  Objectivo     : ${GOAL==='progression'?'Avaliar PROGRESSÃO (vs nadir)':'Avaliar RESPOSTA (vs baseline)'}
+
+CONTEXTO CLÍNICO
+  Diagnóstico       : ${val('entity')}    Componentes: ${val('tumorType')}
+  Modo de medição   : ${m.mode.toUpperCase()}    Fase: ${val('phase')}    Sem. pós-RT: ${val('wkPostRT')}
+  Anti-angiogénico  : ${val('antiang')}    ICI: ${val('ici')}    Lesão em campo de RT: ${val('inField')}
+
+LESÕES-ALVO CAPTANTES
+${lesionLines.length?lesionLines.join('\n'):'  (nenhuma lesão captante mensurável introduzida)'}
+  ---
+  SPD total actual    : ${m.enh.toFixed(0)} ${U}
+  SPD total ${refKind.padEnd(8)} : ${(refKind==='NADIR'?sumProd(refEnh):sumProd(refEnh)).toFixed(0)} ${U}
+  Δ vs basal          : ${m.dBaseE.toFixed(1)}%
+  Δ vs nadir          : ${m.dNadirE.toFixed(1)}%
+
+${(t2Lines.length||val('nonEnhTumor').trim())?`LESÕES NÃO CAPTANTES (T2 / FLAIR)
+${t2Lines.length?t2Lines.join('\n'):'  (sem lesões T2/FLAIR mensuráveis introduzidas)'}
+  ---
+  SPD total actual    : ${m.t2.toFixed(0)} ${U}
+  Δ vs basal          : ${m.dBaseT.toFixed(1)}%
+
+`:''}CARACTERIZAÇÃO MORFOLÓGICA / FUNCIONAL
+${charLines.length?charLines.join('\n'):'  (não especificada)'}
+${radionecrosisHint}
+
+${extras.length?extras.join('\n\n')+'\n\n':''}ACHADOS ADICIONAIS RANO
+  Nova lesão mensurável     : ${val('newLesion')}
+  Disseminação leptomeníngea: ${val('lepto')}
+  Lesões não-alvo           : ${val('nontarget')}
+  Não-mensurável → mensurável: ${val('becameMeasurable')}
+
+CLÍNICA / CORTICOTERAPIA
+  Dex actual      : ${val('dexNow')} mg/d   (basal ${val('dexBase')} mg/d, tendência ${val('steroidTrend')})
+  Estado / NANO   : ${val('clinical')}
+
+LIMIARES APLICADOS (${m.mode.toUpperCase()})
+  PR (vs basal) ≤ ${m.PR_RESP}%   PD (vs nadir) ≥ +${m.PD_GROW}%   Resposta minor ${m.MR_LO}% a ${m.MR_HI}%
+
+────────────────────────────────────────────────
+CLASSIFICAÇÃO SUGERIDA : ${LABEL[r.cat].toUpperCase()}
+Confiança do motor     : ${(r.conf*100).toFixed(0)}%
+RM de confirmação      : ${r.confirm?'REQUERIDA (≥ 4 semanas)':'Não requerida'}
+────────────────────────────────────────────────
+
+REGRAS APLICADAS:
+${r.fired.map((x,i)=>`  ${i+1}. [${x.tag}] ${x.txt.replace(/<[^>]+>/g,'')}`).join('\n')}
+
+Ref.: Wen et al. RANO 2.0, JCO 2023 · Ellingson et al. AJNR 2024 ·
+Park et al. KJR 2024 · Sanvito et al. Curr Opin Oncol 2024.
+— Sugestão de NeuroRANO-DS · interpretação final do clínico —`);
+}
+
+function copyReport(){
+  navigator.clipboard.writeText(document.getElementById('report').textContent).then(()=>{
+    const b=event.target;const o=b.textContent;b.textContent='✓ Copiado';
+    setTimeout(()=>b.textContent=o,1500);
+  });
+}
+
+/* ---------- Demos ---------- */
+function setRow(tbl,i,d1,d2,loc,d3){
+  const tr=document.querySelectorAll('#'+tbl+' tbody tr')[i];
+  if(!tr) return;
+  tr.querySelector('[data-k="d1"]').value=d1||'';
+  tr.querySelector('[data-k="d2"]').value=d2||'';
+  tr.querySelector('[data-k="d3"]').value=d3||'';
+  tr.querySelector('[data-k="loc"]').value=loc||'';
+}
+function clearTables(){
+  ['enhTbl','t2Tbl','refEnhTbl','refT2Tbl'].forEach(t=>
+    document.querySelectorAll('#'+t+' tbody tr').forEach(tr=>{
+      tr.querySelectorAll('input').forEach(i=>i.value='');
+      tr.querySelector('[data-k="prod"]').textContent='0';
+    }));
+}
+function resetAll(){
+  clearTables();
+  ['wkPostRT','dexNow','dexBase'].forEach(id=>document.getElementById(id).value=0);
+  document.getElementById('r-cat').textContent='—';
+  document.getElementById('r-cat').className='cat NE';
+  document.getElementById('r-summary').textContent='Preenche os dados para classificar.';
+  document.getElementById('r-conf').style.width='0%';
+  document.getElementById('r-conf-pct').textContent='0%';
+  document.getElementById('r-badges').innerHTML='';
+  document.getElementById('r-metrics').innerHTML='—';
+  document.getElementById('report').textContent='—';
+  ['rules','cf'].forEach(id=>document.getElementById(id).innerHTML='<li class="INFO"><span class="tag">INFO</span><span>—</span></li>');
+  goStep(1); setGoal('response');
+  recalcAll();
+}
+function loadDemo(k){
+  clearTables();
+  const set=(id,v)=>document.getElementById(id).value=v;
+  set('isConfirmation','no'); set('hasBaseline','yes');
+  set('lepto','no'); set('becameMeasurable','no');
+  if(k==='A'){
+    setGoal('progression');
+    set('entity','gbm'); set('tumorType','enh'); set('phase','newdx');
+    set('wkPostRT',6); set('antiang','no'); set('ici','no'); set('inField','yes');
+    setRow('enhTbl',0,28,22,'frontal D');
+    setRow('refEnhTbl',0,20,20,'frontal D (nadir)');
+    set('newLesion','no'); set('nontarget','absent');
+    set('dexNow',2); set('dexBase',4); set('steroidTrend','down');
+    set('clinical','stable'); set('protocol','yes');
+  } else if(k==='B'){
+    setGoal('progression');
+    set('entity','gbm'); set('tumorType','mixed'); set('phase','recurrent');
+    set('wkPostRT',40); set('antiang','yes'); set('ici','no'); set('inField','yes');
+    setRow('enhTbl',0,15,15,'parietal E');
+    setRow('refEnhTbl',0,20,18,'parietal E (nadir)');
+    setRow('t2Tbl',0,32,26,'parietal FLAIR');
+    setRow('refT2Tbl',0,22,18,'parietal FLAIR (nadir)');
+    set('newLesion','no'); set('nontarget','absent');
+    set('dexNow',4); set('dexBase',4); set('steroidTrend','stable');
+    set('clinical','worse_explained'); set('protocol','yes');
+  } else if(k==='C'){
+    setGoal('response');
+    set('entity','astro2'); set('tumorType','nonenh'); set('phase','watch');
+    set('wkPostRT',999); set('antiang','no'); set('ici','no'); set('inField','no');
+    setRow('t2Tbl',0,38,32,'temporal E');
+    setRow('refT2Tbl',0,40,33,'temporal E (basal)');
+    set('newLesion','no'); set('nontarget','absent');
+    set('dexNow',0); set('dexBase',0); set('steroidTrend','off');
+    set('clinical','stable'); set('protocol','yes');
+  } else if(k==='D'){
+    setGoal('progression');
+    set('entity','gbm'); set('tumorType','enh'); set('phase','recurrent');
+    set('wkPostRT',30); set('antiang','no'); set('ici','yes'); set('inField','yes');
+    setRow('enhTbl',0,25,22,'temporal D');
+    setRow('refEnhTbl',0,18,18,'temporal D (nadir)');
+    set('newLesion','yes'); set('nontarget','absent');
+    set('dexNow',4); set('dexBase',4); set('steroidTrend','stable');
+    set('clinical','stable'); set('protocol','yes');
+  }
+  recalcAll(); run(); goStep(5);
+}
+
+/* init */
+updateRefLabels(); recalcAll();
+</script>
+</body>
+</html>
